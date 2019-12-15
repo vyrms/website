@@ -1,0 +1,556 @@
+---
+title: "DBA Methods"
+author: "Hosei Nakajima"
+date: "11/25/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>This data I worked on is about cardiothoracic diseases. The data was taken from <a href="https://www.kaggle.com/sulianova/cardiovascular-disease-dataset/data" class="uri">https://www.kaggle.com/sulianova/cardiovascular-disease-dataset/data</a>.</p>
+<p>Below are some explanations of the variables in the dataset.</p>
+<ul>
+<li>“id” is the unique identifier of the patients, which I omitted in the analysis</li>
+<li>“age” is the age of the patients in days</li>
+<li>“gender” of 1 is female and 2 is male</li>
+<li>“height” is the height of the patients in cm</li>
+<li>“weight” is the weight of patients in kg</li>
+<li>“ap_hi” is the systolic blood pressure</li>
+<li>“ap_lo” is the diastolic blood pressure</li>
+<li>“cholesterol” of 1 is normal, 2 is above normal, and 3 is well-above normal</li>
+<li>“gluc” of 1 is normal, 2 is above normal, and 3 is well-above normal glucose level</li>
+<li>“smoke” is binary, value of 1 indicates that the patient smoked regularly (subjective)</li>
+<li>“alco” is binary, value of 1 indicates that the patient took alcohol regularly (subjective)</li>
+<li>“active” is binary, value of 1 indicates that the patient was active (subjective)</li>
+<li>“cardio” of 1 indicates diseased patient</li>
+</ul>
+</div>
+<div id="reading-in-the-dataset" class="section level3">
+<h3>Reading in the dataset</h3>
+<pre class="r"><code>cardio = read.csv(&quot;cardio_train.csv&quot;, sep=&quot;;&quot;)
+
+library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+
+# remove id variables and omit NAs just in case there are any
+cardio = cardio %&gt;% select(-1) %&gt;% na.omit()
+
+glimpse(cardio)</code></pre>
+<pre><code>## Observations: 70,000
+## Variables: 12
+## $ age         &lt;int&gt; 18393, 20228, 18857, 17623, 17474, 21914, 22113, 2...
+## $ gender      &lt;int&gt; 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 2, 1,...
+## $ height      &lt;int&gt; 168, 156, 165, 169, 156, 151, 157, 178, 158, 164, ...
+## $ weight      &lt;dbl&gt; 62, 85, 64, 82, 56, 67, 93, 95, 71, 68, 80, 60, 60...
+## $ ap_hi       &lt;int&gt; 110, 140, 130, 150, 100, 120, 130, 130, 110, 110, ...
+## $ ap_lo       &lt;int&gt; 80, 90, 70, 100, 60, 80, 80, 90, 70, 60, 80, 80, 8...
+## $ cholesterol &lt;int&gt; 1, 3, 3, 1, 1, 2, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1,...
+## $ gluc        &lt;int&gt; 1, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1,...
+## $ smoke       &lt;int&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,...
+## $ alco        &lt;int&gt; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,...
+## $ active      &lt;int&gt; 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0,...
+## $ cardio      &lt;int&gt; 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,...</code></pre>
+<p>There were no NAs in the dataset, which was really convenient.</p>
+</div>
+<div id="manova" class="section level3">
+<h3>Manova</h3>
+<pre class="r"><code>man1 = manova(cbind(age, height, weight, ap_hi, ap_lo) ~ cholesterol, data=cardio)
+summary(man1)</code></pre>
+<pre><code>##                Df   Pillai approx F num Df den Df    Pr(&gt;F)    
+## cholesterol     1 0.048783   717.93      5  69994 &lt; 2.2e-16 ***
+## Residuals   69998                                              
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>It seems that at least one of the numeric variables shows a mean difference across levels of cholesterol.</p>
+<div id="univariate-anovas" class="section level4">
+<h4>Univariate ANOVAs</h4>
+<pre class="r"><code>summary.aov(man1)</code></pre>
+<pre><code>##  Response age :
+##                Df     Sum Sq    Mean Sq F value    Pr(&gt;F)    
+## cholesterol     1 1.0161e+10 1.0161e+10    1710 &lt; 2.2e-16 ***
+## Residuals   69998 4.1595e+11 5.9423e+06                      
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response height :
+##                Df  Sum Sq Mean Sq F value    Pr(&gt;F)    
+## cholesterol     1   11903 11902.8  177.03 &lt; 2.2e-16 ***
+## Residuals   69998 4706462    67.2                      
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response weight :
+##                Df   Sum Sq Mean Sq F value    Pr(&gt;F)    
+## cholesterol     1   291552  291552  1435.7 &lt; 2.2e-16 ***
+## Residuals   69998 14214887     203                      
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response ap_hi :
+##                Df     Sum Sq Mean Sq F value    Pr(&gt;F)    
+## cholesterol     1     938740  938740  39.599 3.138e-10 ***
+## Residuals   69998 1659403753   23706                      
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response ap_lo :
+##                Df     Sum Sq Mean Sq F value    Pr(&gt;F)    
+## cholesterol     1    1434526 1434526  40.407 2.075e-10 ***
+## Residuals   69998 2485062580   35502                      
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>From the univariate ANOVAs, we see that all the numeric variables show a mean difference across levels of cholesterol.</p>
+<pre class="r"><code>pairwise.t.test(cardio$age, cardio$cholesterol, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$age and cardio$cholesterol 
+## 
+##   1      2     
+## 2 &lt;2e-16 -     
+## 3 &lt;2e-16 &lt;2e-16
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$height, cardio$cholesterol, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$height and cardio$cholesterol 
+## 
+##   1       2      
+## 2 7.3e-15 -      
+## 3 &lt; 2e-16 0.00024
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$weight, cardio$cholesterol, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$weight and cardio$cholesterol 
+## 
+##   1      2     
+## 2 &lt;2e-16 -     
+## 3 &lt;2e-16 &lt;2e-16
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$ap_hi, cardio$cholesterol, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$ap_hi and cardio$cholesterol 
+## 
+##   1       2   
+## 2 1.8e-06 -   
+## 3 2.6e-07 0.58
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$ap_lo, cardio$cholesterol, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$ap_lo and cardio$cholesterol 
+## 
+##   1       2   
+## 2 7.8e-09 -   
+## 3 1.6e-06 0.65
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>1 - 0.95**11</code></pre>
+<pre><code>## [1] 0.4311999</code></pre>
+<p>We performed 11 tests, so the probability of making a type1 error is 0.43.</p>
+<pre class="r"><code>pairwise.t.test(cardio$age, cardio$cholesterol, p.adj=&quot;bonf&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$age and cardio$cholesterol 
+## 
+##   1      2     
+## 2 &lt;2e-16 -     
+## 3 &lt;2e-16 &lt;2e-16
+## 
+## P value adjustment method: bonferroni</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$height, cardio$cholesterol, p.adj=&quot;bonf&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$height and cardio$cholesterol 
+## 
+##   1       2      
+## 2 2.2e-14 -      
+## 3 &lt; 2e-16 0.00073
+## 
+## P value adjustment method: bonferroni</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$weight, cardio$cholesterol, p.adj=&quot;bonf&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$weight and cardio$cholesterol 
+## 
+##   1      2     
+## 2 &lt;2e-16 -     
+## 3 &lt;2e-16 &lt;2e-16
+## 
+## P value adjustment method: bonferroni</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$ap_hi, cardio$cholesterol, p.adj=&quot;bonf&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$ap_hi and cardio$cholesterol 
+## 
+##   1       2
+## 2 5.4e-06 -
+## 3 7.9e-07 1
+## 
+## P value adjustment method: bonferroni</code></pre>
+<pre class="r"><code>pairwise.t.test(cardio$ap_lo, cardio$cholesterol, p.adj=&quot;bonf&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  cardio$ap_lo and cardio$cholesterol 
+## 
+##   1       2
+## 2 2.3e-08 -
+## 3 4.9e-06 1
+## 
+## P value adjustment method: bonferroni</code></pre>
+<p>From the post-hoc t tests, we see that age and weight shows a mean difference across all the levels of cholesterol. Height, ap_hi and ap_lo of patients with normal cholesterol is different from the rest.</p>
+<p>We assumed ramdom and independent observations, multivariable normality of the response variables, homogeniety of within-group cotariance matrices, linear relationship among the response variables, no extreme outliers, and no multicollinearity. It is very unlikely that all the assumptions were met.</p>
+</div>
+</div>
+<div id="randomization-test" class="section level3">
+<h3>Randomization test</h3>
+<p>My null hypothesis is that there are no difference in ap_hi (systolic blood pressure) between males and females. My alternative hypothesis is that there is a difference in ap_hi between males and females.</p>
+<pre class="r"><code>rand_dist = vector()
+for (i in 1:5000){
+  new = data.frame(systolic = sample(cardio$ap_hi), gender = cardio$gender)
+  rand_dist[i] = mean(new[new$gender == 1,]$systolic) - mean(new[new$gender == 2,]$systolic)
+}
+
+library(ggplot2)
+ggplot(data = data.frame(rand_dist)) + 
+  geom_density(aes(x=rand_dist))</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>meandiff = mean(cardio[cardio$gender==1,]$ap_hi) - mean(cardio[cardio$gender==2,]$ap_hi)
+
+mean(rand_dist &lt; meandiff) * 2</code></pre>
+<pre><code>## [1] 0.1188</code></pre>
+<p>Because the p value was 0.11, we conclude that there are no difference in ap_hi between males and females.</p>
+</div>
+<div id="linear-regression-model" class="section level3">
+<h3>Linear regression model</h3>
+<pre class="r"><code>cardio$height_center = cardio$height - mean(cardio$height)
+fit = lm(weight ~ factor(cholesterol) * height_center, data=cardio)
+summary(fit)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = weight ~ factor(cholesterol) * height_center, data = cardio)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -68.809  -9.248  -2.299   7.214 143.965 
+## 
+## Coefficients:
+##                                     Estimate Std. Error  t value Pr(&gt;|t|)
+## (Intercept)                        72.937474   0.059361 1228.712  &lt; 2e-16
+## factor(cholesterol)2                4.027421   0.151340   26.612  &lt; 2e-16
+## factor(cholesterol)3                6.336336   0.163345   38.791  &lt; 2e-16
+## height_center                       0.503723   0.007259   69.392  &lt; 2e-16
+## factor(cholesterol)2:height_center  0.119539   0.018295    6.534 6.44e-11
+## factor(cholesterol)3:height_center  0.032535   0.019667    1.654   0.0981
+##                                       
+## (Intercept)                        ***
+## factor(cholesterol)2               ***
+## factor(cholesterol)3               ***
+## height_center                      ***
+## factor(cholesterol)2:height_center ***
+## factor(cholesterol)3:height_center .  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 13.58 on 69994 degrees of freedom
+## Multiple R-squared:  0.1101, Adjusted R-squared:   0.11 
+## F-statistic:  1731 on 5 and 69994 DF,  p-value: &lt; 2.2e-16</code></pre>
+<p>People with normal cholesterol levels and mean height are estimated to have a mean weight of 73kg, people with above normal cholesterol levels and mean height are estimated to have a mean weight of 77kg, people with well-above normal cholesterol levels and mean height are estimated to have a mean weight of 79kg. As height goes up by 1 in people with normal cholesterol level, the weight goes up by 0.5kg. As height goes up by 1 in people with above normal cholesterol level, the weight goes up by 0.11kg. As height goes up by 1 in people with well-above normal cholesterol level, the weight goes up by 0.03kg.</p>
+<pre class="r"><code>ggplot(data=cardio, aes(x=height_center, y=weight, color=factor(cholesterol))) +
+  geom_point() +
+  geom_smooth(method=&quot;lm&quot;, se=&quot;false&quot;)</code></pre>
+<pre><code>## Warning: Computation failed in `stat_smooth()`:
+## invalid &#39;x&#39; type in &#39;x || y&#39;</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<pre class="r"><code>hist(cardio$height_center)</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-9-2.png" width="672" />
+The data does not meet assumptions for linearity, but does meet the normality and homoskedasticity assumptions.</p>
+<pre class="r"><code>library(sandwich)
+library(lmtest)</code></pre>
+<pre><code>## Loading required package: zoo</code></pre>
+<pre><code>## 
+## Attaching package: &#39;zoo&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric</code></pre>
+<pre class="r"><code>coeftest(fit, vcov=vcovHC(fit))</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##                                     Estimate Std. Error   t value
+## (Intercept)                        72.937474   0.057657 1265.0134
+## factor(cholesterol)2                4.027421   0.161181   24.9870
+## factor(cholesterol)3                6.336336   0.178580   35.4818
+## height_center                       0.503723   0.011457   43.9659
+## factor(cholesterol)2:height_center  0.119539   0.023370    5.1151
+## factor(cholesterol)3:height_center  0.032535   0.035783    0.9092
+##                                     Pr(&gt;|t|)    
+## (Intercept)                        &lt; 2.2e-16 ***
+## factor(cholesterol)2               &lt; 2.2e-16 ***
+## factor(cholesterol)3               &lt; 2.2e-16 ***
+## height_center                      &lt; 2.2e-16 ***
+## factor(cholesterol)2:height_center 3.144e-07 ***
+## factor(cholesterol)3:height_center    0.3632    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>All the variables are still significant except the interaction between well-above normal cholesterol level and mean centered height.</p>
+<pre class="r"><code>fitmain = lm(weight ~ factor(cholesterol) + height_center, data=cardio)
+summary(fitmain)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = weight ~ factor(cholesterol) + height_center, data = cardio)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -69.083  -9.220  -2.414   7.118 142.955 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)          72.932754   0.059372 1228.40   &lt;2e-16 ***
+## factor(cholesterol)2  3.984686   0.151227   26.35   &lt;2e-16 ***
+## factor(cholesterol)3  6.329752   0.162654   38.91   &lt;2e-16 ***
+## height_center         0.524152   0.006262   83.70   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 13.58 on 69996 degrees of freedom
+## Multiple R-squared:  0.1095, Adjusted R-squared:  0.1095 
+## F-statistic:  2869 on 3 and 69996 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+<div id="linear-regression-with-standard-error-bootstrap" class="section level3">
+<h3>Linear regression with standard error bootstrap</h3>
+<pre class="r"><code>bootSE = replicate(5000, {
+  bootdat = cardio[sample(nrow(cardio), replace=TRUE),]
+  fit = lm(weight ~ factor(cholesterol) * height_center, data=bootdat)
+  coef(fit)
+})
+
+bootSE %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   (Intercept) factor(cholesterol)2 factor(cholesterol)3 height_center
+## 1   0.0576092            0.1577299            0.1775232    0.01126755
+##   factor(cholesterol)2:height_center factor(cholesterol)3:height_center
+## 1                         0.02312993                         0.03560462</code></pre>
+<pre class="r"><code>hist(bootSE[2,])</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-12-1.png" width="672" />
+Bootstrapping the standard error gave us a standard error bigger than the robust standard error, but smaller than the norma theory standard error.</p>
+</div>
+<div id="logistic-regression" class="section level3">
+<h3>Logistic regression</h3>
+<pre class="r"><code>fit = glm(cardio ~ factor(smoke) + height_center, data=cardio, family=binomial)
+coeftest(fit)</code></pre>
+<pre><code>## 
+## z test of coefficients:
+## 
+##                   Estimate  Std. Error z value  Pr(&gt;|z|)    
+## (Intercept)     0.00747049  0.00792921  0.9421 0.3461170    
+## factor(smoke)1 -0.09846715  0.02718046 -3.6227 0.0002915 ***
+## height_center  -0.00199837  0.00093789 -2.1307 0.0331130 *  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>People who smoke are more likely to have a cardiothoracic disease by a factor of -0.098, and as height goes up by 1, the odds of getting a cardiothoracic disease goes up by a factor of -0.0019.</p>
+<div id="confusion-matrix" class="section level4">
+<h4>confusion matrix</h4>
+<pre class="r"><code>cardio$prob&lt;-predict(fit,type=&quot;response&quot;) #get predicted probabilities
+cardio$predicted&lt;-ifelse(cardio$prob&gt;.5, 1, 0) #predicted outcomes
+
+table(truth=cardio$cardio, prediction=cardio$predicted) %&gt;% addmargins()</code></pre>
+<pre><code>##      prediction
+## truth     0     1   Sum
+##   0   11886 23135 35021
+##   1   11587 23392 34979
+##   Sum 23473 46527 70000</code></pre>
+<pre class="r"><code># accuracy
+(11587 +23135) / 70000</code></pre>
+<pre><code>## [1] 0.4960286</code></pre>
+<pre class="r"><code>#specificity (tnr)
+11587 / 34979</code></pre>
+<pre><code>## [1] 0.3312559</code></pre>
+<pre class="r"><code># sensitivity (recall, tpr)
+23135 / 35021</code></pre>
+<pre><code>## [1] 0.6606036</code></pre>
+<pre class="r"><code># precision (ppv)
+23135 / 46527</code></pre>
+<pre><code>## [1] 0.4972382</code></pre>
+<pre class="r"><code>ggplot(data=cardio, aes(x=height_center, y=predicted, color=factor(smoke))) +
+  geom_line()</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-14-1.png" width="672" />
+#### ROC curve and AUC</p>
+<pre class="r"><code>library(plotROC)
+
+ROCplot = ggplot(cardio) + geom_roc(aes(d=cardio, m=height_center))
+ROCplot</code></pre>
+<p><img src="/prj2_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<pre class="r"><code>calc_auc(ROCplot)</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.4928585</code></pre>
+<p>The AUC was 0.49, which indicates that height does not predict cardiothoracic diseases at all.</p>
+</div>
+<div id="fold-cross-validation" class="section level4">
+<h4>10 fold cross validation</h4>
+<pre class="r"><code>class_diag&lt;-function(probs,truth){
+  
+  tab&lt;-table(factor(probs&gt;.5,levels=c(&quot;FALSE&quot;,&quot;TRUE&quot;)),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+
+  if(is.numeric(truth)==FALSE &amp; is.logical(truth)==FALSE) truth&lt;-as.numeric(truth)-1
+  
+  #CALCULATE EXACT AUC
+  ord&lt;-order(probs, decreasing=TRUE)
+  probs &lt;- probs[ord]
+  truth &lt;- truth[ord]
+ 
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup&lt;-c(probs[-1]&gt;=probs[-length(probs)], FALSE)
+  TPR&lt;-c(0,TPR[!dup],1)
+  FPR&lt;-c(0,FPR[!dup],1)
+  
+  n &lt;- length(TPR)
+  auc&lt;- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,auc)
+}
+
+# actual cross validation
+k = 10
+
+data1&lt;-cardio[sample(nrow(cardio)),] #randomly order rows
+folds&lt;-cut(seq(1:nrow(cardio)),breaks=k,labels=F) #create folds
+
+diags&lt;-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train&lt;-data1[folds!=i,] 
+  test&lt;-data1[folds==i,]
+  truth&lt;-test$cardio
+  
+  ## Train model on training set
+  fit&lt;-glm(cardio ~ factor(smoke) + height_center,
+           data=train, family = &quot;binomial&quot;)
+  probs&lt;-predict(fit,newdata = test,type=&quot;response&quot;)
+  
+  ## Test model on test set (save all k results)
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+
+apply(diags, 2, mean)</code></pre>
+<pre><code>##       acc      sens      spec       ppv       auc 
+## 0.5027714 0.6571354 0.3496631 0.5021287 0.5103225</code></pre>
+<p>The average accuracy was 0.5, sensitivity was 0.65, and specificity was 0.35, which aren’t good predictions.</p>
+</div>
+</div>
+<div id="model-with-lasso" class="section level3">
+<h3>Model with lasso</h3>
+<pre class="r"><code>library(glmnet)</code></pre>
+<pre><code>## Loading required package: Matrix</code></pre>
+<pre><code>## 
+## Attaching package: &#39;Matrix&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:tidyr&#39;:
+## 
+##     expand, pack, unpack</code></pre>
+<pre><code>## Loaded glmnet 3.0-1</code></pre>
+<pre class="r"><code>y = as.matrix(cardio$cardio)
+x = cardio %&gt;% dplyr::select(-cardio) %&gt;% mutate_all(scale) %&gt;% as.matrix()
+
+# chooses which ones are the best predictors
+cv = cv.glmnet(x, y)
+lasso = glmnet(x, y, lambda = cv$lambda.1se)
+coef(lasso)</code></pre>
+<pre><code>## 15 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
+##                          s0
+## (Intercept)    0.4997000000
+## age            0.0947710248
+## gender         .           
+## height         .           
+## weight         0.0679154591
+## ap_hi          0.0137494451
+## ap_lo          0.0189107514
+## cholesterol    0.0782913647
+## gluc          -0.0005595804
+## smoke          .           
+## alco           .           
+## active        -0.0092784397
+## height_center -0.0045312188
+## prob           0.0031420280
+## predicted      .</code></pre>
+<p>After the lasso regression, age, weight, ap_hi, ap_lo, cholesterol, active, height_center, and prob were retained.</p>
+</div>
+<div id="fold-cross-validation-with-lasso" class="section level3">
+<h3>10 fold cross validation with lasso</h3>
+<pre class="r"><code>k = 10
+
+data1&lt;-cardio[sample(nrow(cardio)),] #randomly order rows
+folds&lt;-cut(seq(1:nrow(cardio)),breaks=k,labels=F) #create folds
+
+diags&lt;-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train&lt;-data1[folds!=i,] 
+  test&lt;-data1[folds==i,]
+  truth&lt;-test$cardio
+  
+  ## Train model on training set
+  fit&lt;-glm(cardio ~ age + weight + ap_hi + ap_lo + factor(cholesterol) +
+             factor(active) + height_center,
+           data=train, family = &quot;binomial&quot;)
+  probs&lt;-predict(fit,newdata = test,type=&quot;response&quot;)
+  
+  ## Test model on test set (save all k results)
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}</code></pre>
+<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
+<pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
+<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
+<pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
+<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
+<pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
+<pre class="r"><code>apply(diags, 2, mean)</code></pre>
+<pre><code>##       acc      sens      spec       ppv       auc 
+## 0.7200857 0.6749673 0.7652539 0.7417854 0.7842660</code></pre>
+<p>The accuracy now was 0.72, sensitivity was 0.67, and specificity was 0.76. The power of the model increased greatly after using variables chosen by lasso.</p>
+</div>

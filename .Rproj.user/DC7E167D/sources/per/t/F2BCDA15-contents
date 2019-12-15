@@ -1,0 +1,367 @@
+---
+title: "Project 1"
+author: "SDS348 Fall 2019"
+date: ""
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(fig.align="center", fig.height=5, message=FALSE, fig.width=8,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+## Hosei Nakajima hn4977
+
+
+### Getting the data:
+
+##### The data I used was on Anime and Education. The anime data can be found at https://www.kaggle.com/azathoth42/myanimelist#anime_cleaned.csv, and the education data can be found at https://www.kaggle.com/noriuk/us-education-datasets-unification-project#states_all.csv. You can see which specific CSVs I used from the code chunk right below this.
+
+#### I chose the anime data because anime is one of my biggest hobbies, and I was very interested to see how many anime were aired year to year or what types of anime get aired. The anime dataset contained over 30 columns, of which I picked the title, the source of the original story, how many episodes were in that anime, the how long each episodes were, and the rating. The dataset gathers information from a website where users mark an anime as watched and score them, and this data gather information from that. These information are in score, which is the average score out of 10 given by users who watched it, and scored_by, which is the number of people that gave a score to the anime. Year is the year that anime started airing, and studio is the studio that made the anime.
+
+#### I chose the education dataset because I wanted a data that would help make it look like anime is having a strong positive effect on society. This dataset combined many datasets regarding education into one, and contains an insane amount of information. The data contained data for many countries, and I chose Japan and United States from there. Many data were also missing in many years, and I picked some that were fairly complete. The variables I chose are GDP per capita, the percentage of women who are in college, percentage of women who graduated college, and mortality rate under 5. 
+
+#### I expect there to be a positive correlation between number of anime being aired/ watched and GDP per capita or percentage datas in women, and a negative correlation between anime and mortality rate. I am fairly confident that the number of animes airing each year increases year to year, and so are GDP and women in college. 
+
+```{R}
+library(tidyverse)
+library(dplyr)
+
+anime = read.csv('AnimeList.csv')
+# anime %>% glimpse()
+
+education = read.csv('EdStatsData.csv')
+# education %>% glimpse()
+```
+
+
+### Tidying the anime dataset
+
+```{R}
+# remove unnecessary data
+anime <- anime %>% select(-c(anime_id, title_english, title_japanese, 
+                             title_synonyms, image_url, airing, aired_string, 
+                             aired, background, related, opening_theme, 
+                             ending_theme, broadcast, producer, licensor,
+                             genre, status, rank, popularity, members, favorites,
+                             type))
+
+# make premiered into Year
+anime <- anime %>% separate(premiered, into=c(NA, 'Year'), sep=' ', 
+                            convert= TRUE)
+
+# make duration into integer, and rating as 1 word
+anime <- anime %>% 
+  separate(duration, into=c('Duration', NA), sep=' ',convert=TRUE) %>%
+  separate(rating, into=c('Rating', NA), sep=' ', convert=TRUE)
+anime <- anime %>% mutate(Duration = as.integer(Duration))
+
+# remove ones with 0 episodes, because those are either not aired yet or duplicated
+anime <- anime %>% filter(episodes != 0)
+
+# remove NAs
+anime <- anime %>% na.omit()
+```
+### Initial analysis
+#### You can see below the top 10 watched anime as of 2018, and maybe you've heard of some.
+
+```{R}
+anime %>% arrange(desc(scored_by )) %>% select(title) %>% head(10)
+```
+
+#### Here, I grouped the animes by the source and counted what the anime came from. The source indicates where the original story was taken from.
+
+```{R}
+anime %>% group_by(source) %>% summarize(counts = n()) %>% 
+  arrange(desc(counts))
+```
+*4-koma manga is just a type of manga where a little story starts and ends in 4 pictures. It's interesting that an anime was made from music or radio.*
+
+### Adjusting the anime data to join by year
+
+#### Because the anime dataset was organized based on title, where each title had a row to it, I had to change it and summarize them to make this compatible with the education dataset.
+```{r}
+# remove title and studio, as there are too many to consider
+adj_anime <- anime %>% select(-c(title, studio)) %>% arrange(desc(Year))
+
+adj_anime <- adj_anime %>% group_by(Year) %>% 
+  mutate(aired = n()) %>% 
+  arrange(desc(Year))
+
+# make source a column
+adj_anime <- adj_anime %>% group_by(Year, source) %>% mutate(count_source = n()) 
+
+# make rating a column
+adj_anime <- adj_anime %>% group_by(Year, Rating) %>% mutate(count_rate = n())
+
+# make mean of each numeric as column
+adj_anime <- adj_anime %>% group_by(Year) %>% mutate(mean_episodes = mean(episodes)) 
+adj_anime <- adj_anime %>% group_by(Year) %>% mutate(mean_duration = mean(Duration))
+adj_anime <- adj_anime %>% group_by(Year) %>% mutate(mean_score = mean(score))
+adj_anime <- adj_anime %>% group_by(Year) %>% mutate(watched_by = mean(scored_by))
+
+# take out original columns
+adj_anime <- adj_anime %>% select(-c(episodes, Duration, score, scored_by))
+
+# try to make each year as a row, didn't quite work
+adj_anime <- adj_anime %>% group_by(Year, source, Rating) %>% distinct()
+
+# so made the ratings and source column names
+adj_anime <- adj_anime %>% 
+  pivot_wider(names_from = source, values_from = count_source,
+              values_fill = list(count_source = 0))%>%
+  pivot_wider(names_from = Rating, values_from = count_rate,
+              values_fill = list(count_rate = 0))
+
+# since the pivot wider values went onto different rows,
+# I filled NAs with 0, and then basically made 1 Year as 1 row
+adj_anime <- adj_anime %>% group_by(Year) %>% 
+  mutate_at( vars(6:ncol(adj_anime)), function(x){max(x)}) %>%
+  distinct()
+
+# after all this, after I did the correlation matrix, I thought that there are just  way too many numeric variables from making score and rating into column names, so I took them out
+adj_anime <- adj_anime %>% select(-(7:ncol(adj_anime)))
+```
+
+### Tidying the education dataset
+
+```{R}
+# look at colnames
+education %>% colnames()
+# fix the weird character in the colname
+education <- education %>% rename(Country.Name = ï..Country.Name)
+
+# filter for info I found interesting, and also had sufficient data
+education <- education %>% 
+  filter(Indicator.Code %in% c('SH.DYN.MORT', 'SE.TER.GRAD.FE.ZS',
+                               'SE.TER.ENRL.FE.ZS', 'NY.GDP.PCAP.CD'))
+# remove redundant info
+education <- education %>% select(-c('Country.Code', 'Indicator.Code'))
+
+
+# make a subset containing countries I'm interested in
+edu_subset <- education %>% filter(Country.Name %in% c('United States', 'Japan'))
+# get all Year into 1 col
+edu_subset <- edu_subset %>% pivot_longer(contains('X'), names_to = 'Year', 
+                                          values_to = 'Indicator.Value') %>%
+  separate(Year, into = c(NA, 'Year'), sep=1, convert = TRUE)
+# remove years greater than 2015
+edu_subset<- edu_subset %>% filter(Year <= 2015 & Year != '')
+
+# made indicator names into column names
+edu_subset <- edu_subset %>% pivot_wider(names_from = Indicator.Name, 
+                                         values_from = Indicator.Value,)
+
+# remove NAs, which constitute for indicators that weren't collected that year
+edu_subset <- edu_subset %>% na.omit()
+```
+
+### Joining data
+
+```{R}
+# joined data
+fulldata <- left_join(edu_subset, adj_anime)
+# make Year a factor
+fulldata <- fulldata %>% mutate(Year = as.factor(Year))
+# rename the columns that have a long name
+fulldata <- fulldata %>% 
+  rename(female_college = `Percentage of students in tertiary education who are female (%)`) %>% 
+  rename(female_graduated = `Percentage of graduates from tertiary education who are female (%)`) %>%
+  rename(GDP_per_cap = `GDP per capita (current US$)`) %>% 
+  rename(mortality5 = `Mortality rate, under-5 (per 1,000)`)
+
+# rows in edu_subset that aren't in anime
+anti_join(edu_subset, adj_anime) %>% nrow()
+
+# rows in anime that aren't in edu_subset
+anti_join(adj_anime, edu_subset) %>% nrow()
+```
+*I used left_join because I saw that the anime dataset covered more years, and wanted to adjust to the education dataset. As expected, no values were dropped from the education dataset, but 18 were dropped from the anime dataset because the anime data covered more years. I don't think that there will be any problems in dropping them.*
+
+### Exploring the data
+#### 6 core function useage
+```{R}
+fulldata %>% group_by(Country.Name) %>% arrange(desc(GDP_per_cap)) %>%
+  select(c(Country.Name, Year, watched_by, GDP_per_cap)) %>% head(10)
+```
+*We can observe a general trend where as GDP per capita decreases, the number of people watching anime also decrease, indicating a positive correlation between the two variables.*
+
+```{R}
+fulldata %>% group_by(Country.Name) %>% 
+  filter(watched_by < 1000) %>% summarize(n())
+```
+*We can see that there are only 9 years in Japan, and 7 years in Unites States that less than 1000 people watched anime, out of 36 years in this dataset.*
+
+```{R}
+fulldata %>% mutate(total_score = mean_score * watched_by) %>% 
+  arrange(desc(total_score)) %>% select(c(Country.Name, Year, total_score)) %>%
+  head(10)
+```
+*I was expectinng to see a steady increase in the total score in each year, but there seems to be some fluctuations. I'm curious to see what anime started airing in 2012.*
+
+#### Summary statistics
+
+```{R}
+# computing the mean of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, mean) %>% t()
+```
+*GDP and number of people who watch anime have a much higher mean value, which is expected. Many other variables are percentages or out of 10, and average anime duration is 30 mins.*
+
+```{R}
+# computing the sd of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, sd) %>% t()
+```
+*I was surprised to see that the sd of score across years was less than 1. I though there would be years where anime didn't do as well.*
+
+```{R}
+# computing the variation of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, var) %>% t()
+```
+*The variation of females in college was higher in Japan, but the variation of females graduating from college was higher in United States, which is interesting, but a bit difficult to interpret.*
+
+```{R}
+# computing the sum (n) of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, sum) %>% t()
+```
+*The total percentage of mortality is lower in Japan, but females seem to be doing better in United States.*
+
+```{R}
+# computing the quantiles of the number of anime aired per year
+quantile(fulldata$aired)
+```
+*I did the quantiles like this because I wasn't sure how to do this with summarize_if. I was really surprised to see that there was a max of 200 animes being aired in 1 year, which seems just outrageous. I speculate that many of the anime were just a 1 episode thing, but I can't be sure.*
+
+```{R}
+# computing the minimum of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, min) %>% t()
+```
+*We can see that at least 500 people watch anime every year, and I speculate that this was the first few years of the data.*
+
+```{R}
+# computing the max of every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, max) %>% t()
+```
+*I was surprised to see tha more than 50 % of females go to a college and graduate it. I'm also not sure how the females in college is lower than females graduating from college in Japan.*
+
+```{R}
+# computing the number of distinct values in every numeric
+fulldata %>% group_by(Country.Name) %>%
+  summarize_if(is.numeric, n_distinct) %>% t()
+```
+*This is expected because I adjusted the data to be 1 row per year in each country.*
+
+```{R}
+fulldata %>% group_by(Country.Name) %>% 
+  summarize_if(is.numeric, sum) %>% t()
+```
+*As we see above, mortality rate under 5 is better in Japan, but success of women is better in the United States.*
+
+```{R}
+fulldata %>% filter(Country.Name=='Japan') %>% select_if(is.numeric) %>% cor()
+fulldata %>% filter(Country.Name=='United States') %>% select_if(is.numeric) %>% cor()
+```
+*In both countries, Mortality rate under 5, mean_episodes, and mean_score seems to have negative correlation with everything else. Other variables seem to be correlating with eachother fairly well.*
+
+### Correlation
+
+```{R}
+fulldata %>% select_if(is.numeric) %>% cor() %>% as.data.frame() %>%
+  rownames_to_column() %>% pivot_longer(-1) %>% 
+  ggplot(aes(rowname, name, fill=value)) +
+  geom_tile() +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1)) +
+  scale_fill_gradient2(low='blue', high='red') +
+  xlab('') + ylab('') +
+  ggtitle("Correlation between all numeric variables")
+```
+*We can see that aired and watched_by correlate very well, which is very much expected, and they also correlate with GDP strongly. The mean episdes and duration seem to have a negative correlation with many, and I expected 0 correlation, because these don't change much year to year. Mortality under 5 is having negative correlations with many others, which is also expected because other variables are going down year to year, while mortality under 5 is decreasing.*
+
+```{R}
+fulldata %>% pivot_longer(3:ncol(fulldata)) %>% 
+  ggplot(aes(x=name, y=log(value))) +
+    geom_bar(stat='summary') +
+    geom_errorbar(stat="summary", width=0.5, color='red') +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1)) +
+    facet_wrap(vars(Country.Name)) +
+    xlab('') + ylab("") +
+    ggtitle("Log mean values of all variables")
+```
+*Took the log of all the means, because watched_by was extremely large. It's interesting to see that the number of people that watch anime get really close to the GDP in both countries. Number animes being aired each year have a fairly large variation, which was expected from the summary stats above.*
+
+```{R}
+fulldata %>% 
+  ggplot(aes(x=GDP_per_cap, 
+             y=mortality5,
+             color=Country.Name)) +
+    geom_point() +
+    xlab('GDP per capita') +
+    ylab("Mortality rate under 5") +
+    ggtitle("Negative correlation between GDP per capita and mortality")
+```
+*As expected, higher GDP per capita negatively correlates to lower mortality under 5 in both countries. As the people get wealthier, children tend to survive.*
+
+
+```{R}
+fulldata %>% 
+  ggplot(aes(x=watched_by, y=mortality5, 
+             color=Country.Name)) +
+    geom_point() +
+    xlab("Number of people watching anime") +
+    ylab("Mortality rate under 5") +
+    ggtitle('Negative correlation beween anime and mortality')
+```
+*Interestingly, the more people watch anime, the lower the mortality rate under 5 in both countries. This could have an implication in helping children survive through anime.*
+
+```{R}
+fulldata %>% filter(Country.Name == 'United States') %>% 
+  ggplot(aes(x=Year, 
+             y=watched_by,
+             color=female_college)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Number of people watching anime") +
+  labs(color='Females attending college') +
+  ggtitle("Anime watchers and females in college increase together")
+```
+*We can see from this plot that the number of people watching anime increase year to year. As the number of people watching anime increases, the percentage of females going to college increases. This is very interesting. This could have an implication in achieving true equality between the sexes through anime.*
+
+### PCA
+
+```{R}
+# Make the PCA matrix
+pca = fulldata %>% select_if(is.numeric) %>% princomp()
+
+# summary
+summary(pca, loadings = TRUE)
+
+# decide on how many PCs to keep
+eigen = pca$sdev ** 2
+varpop = round(eigen / sum(eigen), 2)
+
+ggplot() +
+  geom_bar(aes(y=varpop, x=1:9), stat='identity') +
+  geom_text(aes(x=1:9, y=varpop, label=round(varpop, 2))) +
+  scale_x_continuous(breaks=1:10) +
+  xlab('Principal component')
+```
+*We can see here that PC1 explains almost all the variation in this dataset. Because of this, I am only keeping PC1.*
+
+```{R}
+library(factoextra)
+fviz_pca_biplot(pca) + coord_fixed()
+```
+*As expected, GDP and number of people watching anime explain most of the variation seen in this dataset because the sheer numbers are large. I feel that taking a log of this data was more appropriate for a PCA rather than passing the raw data, but I wasn't sure if that was allowed.*
+
+
+
+
+
+
