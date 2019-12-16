@@ -1,37 +1,61 @@
 ---
-title: "Hello R Markdown"
-author: "Frida Gomam"
-date: 2015-07-23T21:13:14-05:00
+title: "My first blog"
+author: "H N"
+date: 2019-12-11T21:13:14-05:00
 categories: ["R"]
 tags: ["R Markdown", "plot", "regression"]
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE)
+knitr::knit_engines$set(python = reticulate::eng_python)
 ```
 
-# R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-fit <- lm(dist ~ speed, data = cars)
-fit
+```{r global_options, include=FALSE}
+library(knitr)
+opts_chunk$set(fig.align="center", fig.height=5, fig.width=8)
 ```
 
-# Including Plots
+### I will be writing about some stuff I like about python, although I'm doing this through Rstudio and Rmarkdown.
 
-You can also embed plots. See Figure \@ref(fig:pie) for example:
+I'd been taking a few courses that use python and r, and since then, my main goto programming language has been python, r, or bash. 
 
-```{r pie, fig.cap='A fancy pie chart.', tidy=FALSE}
-par(mar = c(0, 1, 0, 1))
-pie(
-  c(280, 60, 20),
-  c('Sky', 'Sunny side of pyramid', 'Shady side of pyramid'),
-  col = c('#0292D8', '#F7EA39', '#C4B632'),
-  init.angle = -50, border = NA
-)
+R is really nice in dealing with already structures data files, and I think is easier to work with when it comes to data analysis. But I think it's easier to automate the analyses in python than in R (maybe I'm just more used to automating in python). 
+
+I had also been only using what's in basic python, as in I had never really used any of the pachages/ libraries in python besides numpy. After getting exposed to some of the really useful libraries that are built in, I'm starting to like and use python for more than just assignments.
+
+So here are some python I did.
+
+```{R}
+library(reticulate)
+faithful<-faithful
 ```
+*Here's I load a package in R called "reticulate", which allows me to use python code in Rmarkdown. I loaded the faithful dataset for example.*
+
+```{python}
+faithful=r.faithful
+
+faithful.max()
+faithful.min()
+```
+*Here's I loaded the faithful dataset from R into python and looked at the extremes.*
+
+```{python}
+import numpy as np
+
+faithful.mean()
+faithful.median()
+faithful.std()
+
+np.corrcoef(faithful.eruptions, faithful.waiting)
+
+faithful[faithful.waiting>60].shape
+faithful[faithful.waiting>60].eruptions.mean()
+```
+*Thanks to the numpy library in python, I am able to analyze data in almost the same way as I did in R.*
+
+There's also a really, really useful package that I wish I knew earlier called "matplotlib". This basically lets me plot/ visualize data like I did in ggplot. But this rmarkdown file would give me an error about rendering, so I thought I'd just take it out and mention it here.
+
+
+
+
+

@@ -1,0 +1,49 @@
+---
+title: "Resume"
+author: "Hosei Nakajima"
+date: "12/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Hosei Nakajima
+
+## Contacts
+> - vyrms168@protonmail.com
+
+## Education
+> - University of Texas at Austin
+> - - BS Biology, Computational Biology
+> - - Cedentials: Elements of Computing
+
+## Experience
+> - Currently working in Can Cenk's lab to analyze sequencing data.
+
+## Skills
+> - R/ Rmarkdown
+> - python
+> - bash
+> - Efficiently looking stuff up
+
+## Interests
+> - Programming in general
+> - Problem solving
+> - Data analysis
+> - Computational Biology
+> - Stocks
+> - Virtual reality
+
+## Hobbies
+> - Table tennis
+> - Learning programming languages
+> - Video gaming
+> - Cooking
+
+
+
+
+

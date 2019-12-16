@@ -1,49 +1,54 @@
 ---
-title: "Hello R Markdown"
-author: "Frida Gomam"
-date: 2015-07-23T21:13:14-05:00
+title: "My first blog"
+author: "H N"
+date: 2019-12-11T21:13:14-05:00
 categories: ["R"]
 tags: ["R Markdown", "plot", "regression"]
 ---
 
 
 
-<div id="r-markdown" class="section level1">
-<h1>R Markdown</h1>
-<p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
-<p>You can embed an R code chunk like this:</p>
-<pre class="r"><code>summary(cars)
-##      speed           dist       
-##  Min.   : 4.0   Min.   :  2.00  
-##  1st Qu.:12.0   1st Qu.: 26.00  
-##  Median :15.0   Median : 36.00  
-##  Mean   :15.4   Mean   : 42.98  
-##  3rd Qu.:19.0   3rd Qu.: 56.00  
-##  Max.   :25.0   Max.   :120.00
-fit &lt;- lm(dist ~ speed, data = cars)
-fit
-## 
-## Call:
-## lm(formula = dist ~ speed, data = cars)
-## 
-## Coefficients:
-## (Intercept)        speed  
-##     -17.579        3.932</code></pre>
-</div>
-<div id="including-plots" class="section level1">
-<h1>Including Plots</h1>
-<p>You can also embed plots. See Figure <a href="#fig:pie">1</a> for example:</p>
-<pre class="r"><code>par(mar = c(0, 1, 0, 1))
-pie(
-  c(280, 60, 20),
-  c(&#39;Sky&#39;, &#39;Sunny side of pyramid&#39;, &#39;Shady side of pyramid&#39;),
-  col = c(&#39;#0292D8&#39;, &#39;#F7EA39&#39;, &#39;#C4B632&#39;),
-  init.angle = -50, border = NA
-)</code></pre>
-<div class="figure"><span id="fig:pie"></span>
-<img src="/blog/2015-07-23-r-rmarkdown_files/figure-html/pie-1.png" alt="A fancy pie chart." width="672" />
-<p class="caption">
-Figure 1: A fancy pie chart.
-</p>
-</div>
+<div id="i-will-be-writing-about-some-stuff-i-like-about-python-although-im-doing-this-through-rstudio-and-rmarkdown." class="section level3">
+<h3>I will be writing about some stuff I like about python, although I’m doing this through Rstudio and Rmarkdown.</h3>
+<p>I’d been taking a few courses that use python and r, and since then, my main goto programming language has been python, r, or bash.</p>
+<p>R is really nice in dealing with already structures data files, and I think is easier to work with when it comes to data analysis. But I think it’s easier to automate the analyses in python than in R (maybe I’m just more used to automating in python).</p>
+<p>I had also been only using what’s in basic python, as in I had never really used any of the pachages/ libraries in python besides numpy. After getting exposed to some of the really useful libraries that are built in, I’m starting to like and use python for more than just assignments.</p>
+<p>So here are some python I did.</p>
+<pre class="r"><code>library(reticulate)
+faithful&lt;-faithful</code></pre>
+<p><em>Here’s I load a package in R called “reticulate”, which allows me to use python code in Rmarkdown. I loaded the faithful dataset for example.</em></p>
+<pre class="python"><code>faithful=r.faithful
+
+faithful.max()</code></pre>
+<pre><code>## eruptions     5.1
+## waiting      96.0
+## dtype: float64</code></pre>
+<pre class="python"><code>faithful.min()</code></pre>
+<pre><code>## eruptions     1.6
+## waiting      43.0
+## dtype: float64</code></pre>
+<p><em>Here’s I loaded the faithful dataset from R into python and looked at the extremes.</em></p>
+<pre class="python"><code>import numpy as np
+
+faithful.mean()</code></pre>
+<pre><code>## eruptions     3.487783
+## waiting      70.897059
+## dtype: float64</code></pre>
+<pre class="python"><code>faithful.median()</code></pre>
+<pre><code>## eruptions     4.0
+## waiting      76.0
+## dtype: float64</code></pre>
+<pre class="python"><code>faithful.std()</code></pre>
+<pre><code>## eruptions     1.141371
+## waiting      13.594974
+## dtype: float64</code></pre>
+<pre class="python"><code>np.corrcoef(faithful.eruptions, faithful.waiting)</code></pre>
+<pre><code>## array([[1.        , 0.90081117],
+##        [0.90081117, 1.        ]])</code></pre>
+<pre class="python"><code>faithful[faithful.waiting&gt;60].shape</code></pre>
+<pre><code>## (189, 2)</code></pre>
+<pre class="python"><code>faithful[faithful.waiting&gt;60].eruptions.mean()</code></pre>
+<pre><code>## 4.138587301587303</code></pre>
+<p><em>Thanks to the numpy library in python, I am able to analyze data in almost the same way as I did in R.</em></p>
+<p>There’s also a really, really useful package that I wish I knew earlier called “matplotlib”. This basically lets me plot/ visualize data like I did in ggplot. But this rmarkdown file would give me an error about rendering, so I thought I’d just take it out and mention it here.</p>
 </div>
